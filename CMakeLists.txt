@@ -3,12 +3,14 @@ project(osqp_sqp)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
+add_compile_options(-std=c++17)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-)
+find_package(catkin REQUIRED COMPONENTS)
+find_package(Eigen3 REQUIRED COMPONENTS)
+find_package(OsqpEigen REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -100,10 +102,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+ INCLUDE_DIRS include
 #  LIBRARIES osqp_sqp
 #  CATKIN_DEPENDS osqp osqp-eigen
-#  DEPENDS system_lib
+ DEPENDS EIGEN3 OsqpEigen
 )
 
 ###########
@@ -113,14 +115,16 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
-# add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/osqp_sqp.cpp
-# )
+add_library(${PROJECT_NAME}
+  src/osqp_sqp.cpp
+  )
+target_link_libraries(${PROJECT_NAME} ${OsqpEigen_LIBRARIES})
+
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
