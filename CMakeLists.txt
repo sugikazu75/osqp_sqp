@@ -120,10 +120,13 @@ include_directories(
 )
 
 ## Declare a C++ library
-add_library(${PROJECT_NAME}
+add_library(osqp_sqp
   src/osqp_sqp.cpp
   )
-target_link_libraries(${PROJECT_NAME} ${OsqpEigen_LIBRARIES})
+target_link_libraries(osqp_sqp ${OsqpEigen_LIBRARIES})
+
+add_executable(sample1 src/sample1.cpp)
+target_link_libraries(sample1 osqp_sqp ${OsqpEigen_LIBRARIES})
 
 
 ## Add cmake target dependencies of the library
