@@ -237,9 +237,9 @@ namespace osqpsqp
   class sqpSolverOption
   {
   public:
-    int max_iter = 100;
-    double sqp_relative_tolerance_ = 1e-4;
-    double qp_relative_tolerance_ = 1e-4;
+    int sqp_max_iter = 100;
+    double sqp_relative_tolerance = 1e-4;
+    double qp_relative_tolerance = 1e-4;
     bool qp_verbose = false;
   };
 
@@ -282,13 +282,13 @@ namespace osqpsqp
       sqp_log_.clear();
       sqp_solution_ = initial_x_;
       initSolver(sqp_solution_);
-      for(size_t i = 0; i < sqp_solver_option_.max_iter; ++i)
+      for(size_t i = 0; i < sqp_solver_option_.sqp_max_iter; ++i)
         {
           sqp_log_.push_back(sqp_solution_);
           Eigen::VectorXd solution = QP(sqp_solution_);
           sqp_solution_ += solution;
           sqp_iter_ = i + 1;
-          if(solution.cwiseAbs().maxCoeff() < sqp_solver_option_.sqp_relative_tolerance_)
+          if(solution.cwiseAbs().maxCoeff() < sqp_solver_option_.sqp_relative_tolerance)
             break;
         }
       auto end = std::chrono::high_resolution_clock::now();
@@ -330,7 +330,7 @@ namespace osqpsqp
     {
       qp_solver_.settings()->setWarmStart(true);
       qp_solver_.settings()->setVerbosity(sqp_solver_option_.qp_verbose);
-      qp_solver_.settings()->setRelativeTolerance(sqp_solver_option_.qp_relative_tolerance_);
+      qp_solver_.settings()->setRelativeTolerance(sqp_solver_option_.qp_relative_tolerance);
 
       n_constraints_ = cstset_->getNumberOfConstraints();
 
