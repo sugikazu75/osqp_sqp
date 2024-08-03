@@ -15,16 +15,14 @@ catkin_package(
 
 include_directories(
   include
-  ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
+  ${OsqpEigen_INCLUDE_DIRS}
 )
 
-add_library(osqp_sqp
-  src/osqp_sqp.cpp
-  )
-target_link_libraries(osqp_sqp ${OsqpEigen_LIBRARIES})
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g -DNDEBUG")
 
 add_executable(sample1 src/sample1.cpp)
-target_link_libraries(sample1 osqp_sqp ${OsqpEigen_LIBRARIES})
+target_link_libraries(sample1 ${OsqpEigen_LIBRARIES})
 
 add_executable(sample2 src/sample2.cpp)
-target_link_libraries(sample2 osqp_sqp ${OsqpEigen_LIBRARIES})
+target_link_libraries(sample2 ${OsqpEigen_LIBRARIES})
