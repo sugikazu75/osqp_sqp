@@ -25,3 +25,6 @@ target_link_libraries(osqp_sqp ${OsqpEigen_LIBRARIES})
 
 add_executable(sample1 src/sample1.cpp)
 target_link_libraries(sample1 osqp_sqp ${OsqpEigen_LIBRARIES})
+
+add_executable(sample2 src/sample2.cpp)
+target_link_libraries(sample2 osqp_sqp ${OsqpEigen_LIBRARIES})

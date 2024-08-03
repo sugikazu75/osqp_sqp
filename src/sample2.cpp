@@ -6,10 +6,10 @@
   min sqrt(x1)
   s.t.
   x1 >= 0
-  x1 - (-x0 + 1)^3 >= 0
-  x1 - (2x0)^3 >= 0
+  x1 - x0^2 + x0 >= 5/4
+  x1 - x0^2 = 0
 
-  ans: 0.54433 (x0, x1) = (1/3, 8/27)
+  ans: 5/4 (x0, x1) = (5/4, 25/16)
 
 */
 
@@ -32,18 +32,17 @@ public:
   void evaluate(const Eigen::VectorXd &x, Eigen::VectorXd &values, Eigen::SparseMatrix<double> &jacobian, size_t constraint_idx_head)
   {
     values(constraint_idx_head +  0) = x(1);
-    values(constraint_idx_head +  1) = x(1) - (-x(0) + 1) * (-x(0) + 1) * (-x(0) + 1);
-    values(constraint_idx_head +  2) = x(1) - (2 * x(0)) * (2 * x(0)) * (2 * x(0));
+    values(constraint_idx_head +  1) = x(1) - x(0) * x(0) + x(0);
+    values(constraint_idx_head +  2) = x(1) - x(0) * x(0);
 
     jacobian.coeffRef(constraint_idx_head + 0, 0) = 0;
-    jacobian.coeffRef(constraint_idx_head + 1, 0) = -3 * (-1) * (-x(0) + 1) * (-x(0) + 1);
-    jacobian.coeffRef(constraint_idx_head + 2, 0) = -3 * 2    * (2 * x(0)) * (2 * x(0));
+    jacobian.coeffRef(constraint_idx_head + 1, 0) = -2 * x(0) + 1;
+    jacobian.coeffRef(constraint_idx_head + 2, 0) = -2 * x(0);
     jacobian.coeffRef(constraint_idx_head + 0, 1) = 1;
     jacobian.coeffRef(constraint_idx_head + 1, 1) = 1;
     jacobian.coeffRef(constraint_idx_head + 2, 1) = 1;
   }
 };
-
 
 int main()
 {
@@ -55,9 +54,9 @@ int main()
   Eigen::VectorXd initial_x = Eigen::VectorXd::Zero(2);
   Eigen::VectorXd sqp_lower_bounds = Eigen::VectorXd::Zero(3);
   Eigen::VectorXd sqp_upper_bounds = Eigen::VectorXd::Zero(3);
-  initial_x << 1.234, 5.678;
-  sqp_lower_bounds << 0, 0, 0;
-  sqp_upper_bounds << INFINITY, INFINITY, INFINITY;
+  initial_x << 4, 5;
+  sqp_lower_bounds << 0, 5.0 / 4.0, 0;
+  sqp_upper_bounds << INFINITY, INFINITY, 0;
 
   solver.checkCostGradient(initial_x);
   solver.checkConstraintJacobians(initial_x);
