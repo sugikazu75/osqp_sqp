@@ -120,6 +120,7 @@ namespace osqpsqp
 
     double getCostValue() {return sqp_cost_value_;}
     int getIteration() {return sqp_iter_;}
+    std::vector<Eigen::VectorXd> getSolutionLog() {return sqp_log_;}
     Eigen::VectorXd getSolution() {return sqp_solution_;}
     Eigen::VectorXd getConstrainValue() {return sqp_constraint_value_;}
     double getSolveTime() {return sqp_solve_time_;}
@@ -137,6 +138,7 @@ namespace osqpsqp
     double sqp_solve_time_;
     double sqp_cost_value_;
     int sqp_iter_;
+    std::vector<Eigen::VectorXd> sqp_log_;
     Eigen::VectorXd sqp_solution_;
     Eigen::VectorXd sqp_constraint_value_;
     Eigen::VectorXd sqp_lower_bounds_;

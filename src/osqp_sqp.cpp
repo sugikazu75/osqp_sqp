@@ -141,10 +141,12 @@ namespace osqpsqp
   void sqpSolver::solve()
   {
     auto start = std::chrono::high_resolution_clock::now();
+    sqp_log_.clear();
     sqp_solution_ = initial_x_;
     initSolver(sqp_solution_);
     for (size_t i = 0; i < sqp_solver_option_.max_iter; ++i)
       {
+        sqp_log_.push_back(sqp_solution_);
         Eigen::VectorXd solution = QP(sqp_solution_);
         sqp_solution_ += solution;
         sqp_iter_ = i + 1;

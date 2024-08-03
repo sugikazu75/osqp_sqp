@@ -65,9 +65,16 @@ int main()
   solver.setUpperBounds(sqp_upper_bounds);
 
   solver.solve();
+  std::vector<Eigen::VectorXd> log = solver.getSolutionLog();
 
   std::cout << "solved with " << solver.getIteration() << " iteration" << std::endl;
   std::cout << "final cost: " << solver.getCostValue() << std::endl;
   std::cout << "final solution: " << solver.getSolution().transpose() << std::endl;
   std::cout << "solve time: " << solver.getSolveTime() << "[us]" << std::endl;
+  std::cout << "\nlog:" << std::endl;
+  for(size_t i = 0; i < log.size(); i++)
+    {
+      std::cout << "iter " << i + 1 << ": " << log.at(i).transpose() << std::endl;
+      std::cout << std::endl;
+    }
 }
