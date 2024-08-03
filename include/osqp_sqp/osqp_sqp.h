@@ -239,7 +239,7 @@ namespace osqpsqp
   public:
     int max_iter = 100;
     double sqp_relative_tolerance_ = 1e-4;
-    double qp_relative_tolerance_ = 1e-2;
+    double qp_relative_tolerance_ = 1e-4;
     bool qp_verbose = false;
   };
 
