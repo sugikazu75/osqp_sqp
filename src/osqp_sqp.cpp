@@ -2,25 +2,18 @@
 
 namespace osqpsqp
 {
-  ConstraintBase::ConstraintBase(int n_variables, const std::vector<double>& tol):
-    n_variables_(n_variables)
+  bool CostBase::checkGradient(const Eigen::VectorXd &x, bool verbose, double eps)
   {
-    tol_.resize(tol.size());
-    for(size_t i = 0; i < tol.size(); i++) tol_(i) = tol.at(i);
-    n_constraints_ = tol_.size();
-  }
-
-  bool CostBase::checkGradient(const Eigen::VectorXd &x, double eps, bool verbose)
-  {
-    Eigen::VectorXd ana_grad = Eigen::VectorXd(n_variables_);
-    Eigen::VectorXd num_grad = Eigen::VectorXd(n_variables_);
+    int n_variables = x.size();
+    Eigen::VectorXd ana_grad = Eigen::VectorXd::Zero(n_variables);
+    Eigen::VectorXd num_grad = Eigen::VectorXd::Zero(n_variables);
 
     { // numerical differentiation
-      Eigen::VectorXd whatever = Eigen::VectorXd(n_variables_);
+      Eigen::VectorXd whatever = Eigen::VectorXd(n_variables);
       double f0;
       evaluate(x, f0, whatever);
 
-      for(int i = 0; i < n_variables_; i++)
+      for(size_t i = 0; i < n_variables; i++)
         {
           Eigen::VectorXd x_plus = x;
           x_plus(i) += eps;
@@ -52,48 +45,49 @@ namespace osqpsqp
     return ok;
   }
 
-  bool ConstraintBase::checkJacobian(const Eigen::VectorXd &x, double eps, bool verbose)
+  bool ConstraintBase::checkJacobian(const Eigen::VectorXd &x, bool verbose, double eps)
   {
-    Eigen::SparseMatrix<double> ana_jac = Eigen::SparseMatrix<double>(n_constraints_, n_variables_);
-    Eigen::MatrixXd num_jac = Eigen::MatrixXd::Zero(n_constraints_, n_variables_);
+    int n_variables = x.size();
+    Eigen::SparseMatrix<double> ana_jac = Eigen::SparseMatrix<double>(n_constraints_, n_variables);
+    Eigen::MatrixXd num_jac = Eigen::MatrixXd::Zero(n_constraints_, n_variables);
     ana_jac.setZero();
     num_jac.setZero();
 
-  { // numerical differentiation
-    Eigen::SparseMatrix<double> whatever = Eigen::SparseMatrix<double>(n_constraints_, n_variables_);
-    Eigen::VectorXd f0 = Eigen::VectorXd::Zero(n_constraints_);
-    evaluate(x, f0, whatever, 0);
+    { // numerical differentiation
+      Eigen::SparseMatrix<double> whatever = Eigen::SparseMatrix<double>(n_constraints_, n_variables);
+      Eigen::VectorXd f0 = Eigen::VectorXd::Zero(n_constraints_);
+      evaluate(x, f0, whatever, 0);
 
-    for (int i = 0; i < n_variables_; i++)
+      for (size_t i = 0; i < n_variables; i++)
+        {
+          Eigen::VectorXd x_plus = x;
+          x_plus(i) += eps;
+          Eigen::VectorXd f1 = Eigen::VectorXd::Zero(n_constraints_);
+          evaluate(x_plus, f1, whatever, 0);
+          num_jac.col(i) = (f1 - f0) * (1 / eps);
+        }
+    }
+
+    { // analytical differentiation
+      Eigen::VectorXd whatever = Eigen::VectorXd::Zero(n_constraints_);
+      evaluate(x, whatever, ana_jac, 0);
+    }
+
+    double max_diff = (num_jac - ana_jac.toDense()).cwiseAbs().maxCoeff();
+    double check_eps = eps * 10;
+    bool ok = max_diff < check_eps;
+    if (verbose && !ok)
       {
-        Eigen::VectorXd x_plus = x;
-        x_plus(i) += eps;
-        Eigen::VectorXd f1 = Eigen::VectorXd::Zero(n_constraints_);
-        evaluate(x_plus, f1, whatever, 0);
-        num_jac.col(i) = (f1 - f0) * (1 / eps);
+        std::cout << "max_diff: " << max_diff << std::endl;
+        std::cout << "check_eps: " << check_eps << std::endl;
+        std::cout << "num_jac: " << std::endl << num_jac << std::endl;
+        std::cout << "ana_jac: " << std::endl << ana_jac.toDense() << std::endl;
       }
-  }
-
-  { // analytical differentiation
-    Eigen::VectorXd whatever = Eigen::VectorXd::Zero(n_constraints_);
-    evaluate(x, whatever, ana_jac, 0);
-  }
-
-  double max_diff = (num_jac - ana_jac.toDense()).cwiseAbs().maxCoeff();
-  double check_eps = eps * 10;
-  bool ok = max_diff < check_eps;
-  if (verbose && !ok)
-    {
-      std::cout << "max_diff: " << max_diff << std::endl;
-      std::cout << "check_eps: " << check_eps << std::endl;
-      std::cout << "num_jac: " << std::endl << num_jac << std::endl;
-      std::cout << "ana_jac: " << std::endl << ana_jac.toDense() << std::endl;
-    }
-  if(verbose && ok)
-    {
-      std::cout << "numerical and analytical jacobian is identical" << std::endl;
-    }
-  return ok;
+    if(verbose && ok)
+      {
+        std::cout << "numerical and analytical jacobian is identical" << std::endl;
+      }
+    return ok;
   }
 
   bool InequalityConstraintBase::evaluateFull(const Eigen::VectorXd &x, Eigen::VectorXd &values,
@@ -109,8 +103,8 @@ namespace osqpsqp
     qp_lower_bounds.segment(constraint_idx_head, n_constraints_) = sqp_lower_bounds.segment(constraint_idx_head, n_constraints_) - value_sliced;
     qp_upper_bounds.segment(constraint_idx_head, n_constraints_) = sqp_upper_bounds.segment(constraint_idx_head, n_constraints_) - value_sliced;
 
-    //  sqp_lower_bounds - tol_   < value_sliced  < sqp_upper_bounds + tol_ ?
-    bool is_feasible =((sqp_lower_bounds.segment(constraint_idx_head, n_constraints_) - tol_).array() - value_sliced.array()).all()  && (value_sliced.array() <= (sqp_upper_bounds.segment(constraint_idx_head, n_constraints_) + tol_).array()).all();
+    bool is_feasible = ((sqp_lower_bounds.segment(constraint_idx_head, n_constraints_) - tol_).array() - value_sliced.array()).all()  && (value_sliced.array() <= (sqp_upper_bounds.segment(constraint_idx_head, n_constraints_) + tol_).array()).all();  // sqp_lower_bounds - tol_ <= value_sliced <= sqp_upper_bounds + tol_
+
     return is_feasible;
   }
 
@@ -135,75 +129,63 @@ namespace osqpsqp
 
   sqpSolver::sqpSolver(int n_variables):
     n_variables_(n_variables),
+    qp_first_solve_(true),
     hessian_first_update_(true)
   {
-    qp_first_solve_ = true;
     initial_x_ = Eigen::VectorXd::Zero(n_variables_);
-    qp_gradient_ = Eigen::VectorXd::Zero(n_variables_);
     qp_hessian_ = Eigen::MatrixXd::Identity(n_variables_, n_variables_);
+    qp_gradient_ = Eigen::VectorXd::Zero(n_variables_);
     cstset_ = std::make_shared<ConstraintSet>();
-    cstset_->setNumberOfVariables(n_variables_);
   }
 
   void sqpSolver::solve()
   {
-    Eigen::VectorXd x = initial_x_;
-    initSolver(x);
-    std::cout << "init solver done" << std::endl;
-    std::cout << std::endl;
-
-    for (int i = 0; i < sqp_solver_option_.max_iter; ++i) {
-      x_log_.push_back(x);
-      std::cout << "iter:" << i << std::endl;
-      Eigen::VectorXd solution = QP(x);
-      x += solution;
-
-      if (solution.norm() < sqp_solver_option_.sqp_relative_tolerance_) {
-        break;
+    auto start = std::chrono::high_resolution_clock::now();
+    sqp_solution_ = initial_x_;
+    initSolver(sqp_solution_);
+    for (size_t i = 0; i < sqp_solver_option_.max_iter; ++i)
+      {
+        Eigen::VectorXd solution = QP(sqp_solution_);
+        sqp_solution_ += solution;
+        sqp_iter_ = i + 1;
+        if (solution.cwiseAbs().maxCoeff() < sqp_solver_option_.sqp_relative_tolerance_)
+          break;
       }
-    }
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    sqp_solve_time_ = duration.count();
   }
 
   void sqpSolver::initSolver(const Eigen::VectorXd& x)
   {
-    std::cout << sqp_solver_option_.qp_relative_tolerance_ << std::endl;
     qp_solver_.settings()->setWarmStart(true);
     qp_solver_.settings()->setVerbosity(sqp_solver_option_.qp_verbose);
     qp_solver_.settings()->setRelativeTolerance(sqp_solver_option_.qp_relative_tolerance_);
-    std::cout << "qp solver setting" << std::endl;
-
-    double cost_value;
-    cost_->evaluate(x, cost_value, qp_gradient_);
 
     n_constraints_ = cstset_->getNumberOfConstraints();
+
+    sqp_constraint_value_.resize(n_constraints_);
     qp_constraint_linear_matrix_sparse_ = Eigen::SparseMatrix<double>(n_constraints_, n_variables_);
     qp_lower_bounds_.resize(n_constraints_);
     qp_upper_bounds_.resize(n_constraints_);
-    Eigen::VectorXd constraint_value = Eigen::VectorXd::Zero(n_constraints_);
-    cstset_->evaluateFull(x, constraint_value,
+
+    cost_->evaluate(x, sqp_cost_value_, qp_gradient_);
+    cstset_->evaluateFull(x, sqp_constraint_value_,
                           qp_constraint_linear_matrix_sparse_,
                           sqp_lower_bounds_, sqp_upper_bounds_,
                           qp_lower_bounds_, qp_upper_bounds_);
+
     qp_hessian_sparse_ = qp_hessian_.sparseView();
     qp_constraint_linear_matrix_ = qp_constraint_linear_matrix_sparse_.toDense();
 
-    qp_solver_.data()->setNumberOfVariables(n_variables_);
-    qp_solver_.data()->setNumberOfConstraints(cstset_->getNumberOfConstraints());
     bool ok = true;
+    qp_solver_.data()->setNumberOfVariables(n_variables_);
+    qp_solver_.data()->setNumberOfConstraints(n_constraints_);
     ok &= qp_solver_.data()->setHessianMatrix(qp_hessian_sparse_);
     ok &= qp_solver_.data()->setGradient(qp_gradient_);
     ok &= qp_solver_.data()->setLinearConstraintsMatrix(qp_constraint_linear_matrix_sparse_);
     ok &= qp_solver_.data()->setLowerBound(qp_lower_bounds_);
     ok &= qp_solver_.data()->setUpperBound(qp_upper_bounds_);
-
-    std::cout << std::endl;
-    std::cout << std::endl;
-    std::cout << "x: " << x.transpose() << std::endl;
-    std::cout << "hessian: \n" << qp_hessian_sparse_.toDense() << std::endl;
-    std::cout << "gradient: " << qp_gradient_.transpose() << std::endl;
-    std::cout << "jacobian\n" << qp_constraint_linear_matrix_sparse_.toDense() << std::endl;
-    std::cout << "qp_lower: " << qp_lower_bounds_.transpose() << std::endl;
-    std::cout << "qp_upper: " << qp_upper_bounds_.transpose() << std::endl;
 
     if (!ok)
       {
@@ -219,34 +201,22 @@ namespace osqpsqp
     Eigen::VectorXd qp_gradient_prev = qp_gradient_;
     Eigen::MatrixXd qp_constraint_linear_matrix_prev = qp_constraint_linear_matrix_;
 
-    double cost_value;
-    cost_->evaluate(x, cost_value, qp_gradient_);
-
-    Eigen::VectorXd constraint_value = Eigen::VectorXd(n_constraints_);
-    cstset_->evaluateFull(x, constraint_value,
+    cost_->evaluate(x, sqp_cost_value_, qp_gradient_);
+    cstset_->evaluateFull(x, sqp_constraint_value_,
                           qp_constraint_linear_matrix_sparse_,
                           sqp_lower_bounds_, sqp_upper_bounds_,
                           qp_lower_bounds_, qp_upper_bounds_);
-
     qp_constraint_linear_matrix_ = qp_constraint_linear_matrix_sparse_.toDense();
 
     if(qp_first_solve_)
       qp_first_solve_ = false;
     else
       {
-        qp_hessian_ = updateHessianBFGS(qp_hessian_, x, qp_x_,
+        qp_hessian_ = updateHessianBFGS(qp_hessian_, x, qp_x_prev_,
                                         qp_dual_solution_, qp_gradient_, qp_gradient_prev,
                                         qp_constraint_linear_matrix_, qp_constraint_linear_matrix_prev);
       }
     qp_hessian_sparse_ = convertSparseMatrix(qp_hessian_);
-
-    std::cout << "x: " << x.transpose() << std::endl;
-    std::cout << "hessian" << std::endl;
-    std::cout << qp_hessian_ << std::endl;
-    std::cout << "gradient " << qp_gradient_.transpose() << std::endl;
-    std::cout << "jacobian\n" << qp_constraint_linear_matrix_ << std::endl;
-    std::cout << "qp_lower: " << qp_lower_bounds_.transpose() << std::endl;
-    std::cout << "qp_upper: " << qp_upper_bounds_.transpose() << std::endl;
 
     bool ok = true;
     ok &= qp_solver_.updateHessianMatrix(qp_hessian_sparse_); //H
@@ -254,21 +224,17 @@ namespace osqpsqp
     ok &= qp_solver_.updateLinearConstraintsMatrix(qp_constraint_linear_matrix_sparse_); //A
     ok &= qp_solver_.updateBounds(qp_lower_bounds_, qp_upper_bounds_);
     ok &= qp_solver_.solve();
-    
+
     if (!ok)
       {
         std::cerr << "variable : " << x.transpose() << std::endl;
         std::cerr << "solution : " << qp_solver_.getSolution().transpose() << std::endl;
         throw std::runtime_error("QP failed");
       }
-    
+
     qp_dual_solution_ = qp_solver_.getDualSolution();
-    qp_x_ = x;
-    
-    std::cout << "solution: " << qp_solver_.getSolution().transpose() << std::endl;
-    std::cout << std::endl;
-    std::cout << std::endl;
-    std::cout << std::endl;
+    qp_x_prev_ = x;
+
     return qp_solver_.getSolution();
   }
 
