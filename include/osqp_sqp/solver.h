@@ -1,12 +1,13 @@
 #pragma once
 
+#include <chrono>
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
+#include <memory>
 #include <OsqpEigen/OsqpEigen.h>
 #include <osqp_sqp/constraint.h>
 #include <osqp_sqp/constraint_set.h>
 #include <osqp_sqp/utils.h>
-#include <chrono>
-#include <memory>
 #include <vector>
 
 namespace osqpsqp

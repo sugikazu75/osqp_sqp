@@ -1,9 +1,8 @@
 #pragma once
 
-#include <osqp_sqp/constraint.h>
-
 #include <Eigen/Dense>
 #include <memory>
+#include <osqp_sqp/constraint.h>
 #include <vector>
 
 namespace osqpsqp
