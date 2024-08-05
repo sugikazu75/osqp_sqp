@@ -9,7 +9,6 @@ find_package(OsqpEigen REQUIRED)
 
 catkin_package(
  INCLUDE_DIRS include
- LIBRARIES osqp_sqp
  DEPENDS EIGEN3 OsqpEigen
 )
 
