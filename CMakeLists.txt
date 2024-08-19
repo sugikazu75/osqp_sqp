@@ -18,7 +18,10 @@ include_directories(
   ${OsqpEigen_INCLUDE_DIRS}
 )
 
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g -DNDEBUG")
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 add_executable(sample1 src/sample1.cpp)
 target_link_libraries(sample1 ${OsqpEigen_LIBRARIES})
